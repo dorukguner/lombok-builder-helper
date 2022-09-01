@@ -1,0 +1,30 @@
+<idea-plugin>
+  <id>com.dguner.lombok-builder-helper</id>
+  <name>Lombok Builder Helper</name>
+  <vendor url="https://github.com/dorukguner/lombok-builder-helper">dguner</vendor>
+
+  <description><![CDATA[
+<h1>Lombok Builder Helper</h1>
+<br/>
+<p>
+    Displays an error when <b>@NonNull</b> annotated fields are not set when calling a Lombok <b>@Builder</b>
+</p>
+<p>
+    Quick-fix adds all fields that are annotated with <b>@NonNull</b> to the builder call
+</p>
+    ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.java</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <localInspection language="JAVA"
+      displayName="Lombok builder is missing @NonNull fields"
+      groupPath="Java"
+      groupBundle="messages.InspectionsBundle"
+      groupKey="group.names.probable.bugs"
+      enabledByDefault="true"
+      level="ERROR"
+      implementationClass="com.dguner.lombokbuilderhelper.LombokBuilderInspection"/>
+  </extensions>
+</idea-plugin>
