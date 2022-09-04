@@ -15,10 +15,8 @@ dependencies {
     testImplementation("org.projectlombok:lombok:1.18.24")
 }
 
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2021.3")
+    version.set("2020.3")
     plugins.set(listOf("com.intellij.java"))
 }
 
@@ -31,6 +29,7 @@ tasks {
 
     patchPluginXml {
         version.set("${project.version}")
-        sinceBuild.set("213")
+        sinceBuild.set("203")
+        untilBuild.set("")
     }
 }

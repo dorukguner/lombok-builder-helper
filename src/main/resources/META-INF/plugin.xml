@@ -4,8 +4,6 @@
   <vendor url="https://github.com/dorukguner/lombok-builder-helper">dguner</vendor>
 
   <description><![CDATA[
-<h1>Lombok Builder Helper</h1>
-<br/>
 <p>
     Displays an error when <b>@NonNull</b> annotated fields are not set when calling a Lombok <b>@Builder</b>
 </p>
