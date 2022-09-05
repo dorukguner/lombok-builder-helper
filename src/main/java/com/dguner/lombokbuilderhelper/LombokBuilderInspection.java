@@ -17,12 +17,17 @@ import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
+import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.searches.ReferencesSearch;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,10 +39,12 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
 
     private List<String> processMissingFields(PsiElement parent, List<String> mandatoryFields) {
         Queue<PsiElement> queue = new LinkedList<>();
+        Set<PsiElement> seen = new HashSet<>();
         queue.offer(parent);
 
         while (!queue.isEmpty()) {
             PsiElement cur = queue.poll();
+            seen.add(cur);
             if (cur instanceof PsiIdentifierImpl) {
                 mandatoryFields.remove(cur.getText());
             }
@@ -45,7 +52,15 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
             if (cur instanceof PsiReferenceExpressionImpl) {
                 PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
                 if (resolvedElement instanceof PsiLocalVariable) {
-                    queue.offer(((PsiLocalVariable) resolvedElement).getInitializer());
+                    Arrays.stream(ReferencesSearch.search(resolvedElement,
+                                            GlobalSearchScope.fileScope(resolvedElement.getContainingFile()), false)
+                                    .toArray(PsiReference.EMPTY_ARRAY))
+                            .forEach(a -> {
+                                PsiElement curParent = a.getElement().getParent();
+                                if (!seen.contains(curParent)) {
+                                    queue.offer(curParent);
+                                }
+                            });
                 }
             }
 
