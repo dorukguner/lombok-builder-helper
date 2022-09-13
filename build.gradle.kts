@@ -1,10 +1,10 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.8.1"
+    id("org.jetbrains.intellij") version "1.9.0"
 }
 
 group = "com.dguner.lombokbuilderhelper"
-version = "1.1.0"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
