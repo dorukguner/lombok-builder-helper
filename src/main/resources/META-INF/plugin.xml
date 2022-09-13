@@ -12,6 +12,14 @@
 </p>
     ]]></description>
 
+  <change-notes><![CDATA[
+  <h2>Improvements</h2>
+  <ul>
+  <li>Improved code inspection and object comparisons</li>
+  <li>Now accounts for prior calls to toBuilder</li>
+  </ul>
+  ]]></change-notes>
+
   <depends>com.intellij.modules.platform</depends>
   <depends>com.intellij.java</depends>
 
