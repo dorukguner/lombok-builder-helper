@@ -19,6 +19,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
+import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,30 +39,46 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
             Logger.getInstance("#com.dguner.lombokbuilderhelper.LombokBuilderInspection");
     private final LbiQuickFix myQuickFix = new LbiQuickFix();
 
-    private List<String> processMissingFields(PsiElement parent, List<String> mandatoryFields) {
+    private List<String> processMissingFields(PsiElement expression, List<String> mandatoryFields) {
         Queue<PsiElement> queue = new LinkedList<>();
-        Set<PsiElement> seen = new HashSet<>();
-        queue.offer(parent);
+        Set<PsiElement> seenElements = new HashSet<>();
+        queue.offer(expression);
 
         while (!queue.isEmpty()) {
             PsiElement cur = queue.poll();
-            seen.add(cur);
+            seenElements.add(cur);
             if (cur instanceof PsiIdentifierImpl) {
                 mandatoryFields.remove(cur.getText());
+            }
+
+            if (cur instanceof PsiMethodCallExpressionImpl) {
+                // If we are calling build on an element that was a result of a toBuilder call we assume
+                // that the builder already has all mandatory fields set
+                PsiMethod resolvedMethod = ((PsiMethodCallExpressionImpl) cur).resolveMethod();
+                if (resolvedMethod != null && Objects.equals(resolvedMethod.getClass().getName(),
+                        "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder")
+                        && Objects.equals(resolvedMethod.getName(), "toBuilder")) {
+                    mandatoryFields.clear();
+                    break;
+                }
             }
 
             if (cur instanceof PsiReferenceExpressionImpl) {
                 PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
                 if (resolvedElement instanceof PsiLocalVariable) {
+                    PsiElement initializer = ((PsiLocalVariable) resolvedElement).getInitializer();
+                    if (!seenElements.contains(initializer)) {
+                        queue.offer(initializer);
+                    }
+
                     Arrays.stream(ReferencesSearch.search(resolvedElement,
-                                            GlobalSearchScope.fileScope(resolvedElement.getContainingFile()), false)
-                                    .toArray(PsiReference.EMPTY_ARRAY))
-                            .forEach(a -> {
-                                PsiElement curParent = a.getElement().getParent();
-                                if (!seen.contains(curParent)) {
-                                    queue.offer(curParent);
-                                }
-                            });
+                                    GlobalSearchScope.fileScope(resolvedElement.getContainingFile()), false)
+                            .toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
+                        PsiElement referenceParent = reference.getElement().getParent();
+                        if (!seenElements.contains(referenceParent)) {
+                            queue.offer(referenceParent);
+                        }
+                    });
                 }
             }
 
@@ -83,15 +101,15 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
 
     private boolean isClassBuilder(PsiClass aClass) {
         return Arrays.stream(aClass.getAnnotations())
-                .anyMatch(annotation -> annotation.getQualifiedName() != null
-                        && annotation.getQualifiedName().equals("lombok.Builder"));
+                .anyMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
+                        "lombok.Builder"));
     }
 
     private List<String> getMandatoryFields(PsiClass aClass) {
         return Arrays.stream(aClass.getAllFields())
                 .filter(field -> Arrays.stream(field.getAnnotations())
-                        .anyMatch(annotation -> annotation.getQualifiedName() != null
-                                && annotation.getQualifiedName().equals("lombok.NonNull")))
+                        .anyMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
+                                "lombok.NonNull")))
                 .map(PsiField::getName)
                 .collect(Collectors.toList());
     }
@@ -108,8 +126,9 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
                 super.visitMethodCallExpression(expression);
                 PsiMethod resolvedMethod = expression.resolveMethod();
 
-                if (resolvedMethod != null && resolvedMethod.toString()
-                        .equals("LombokLightMethodBuilder: build")) {
+                if (resolvedMethod != null && Objects.equals(resolvedMethod.getClass().getName(),
+                        "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder")
+                        && Objects.equals(resolvedMethod.getName(), "build")) {
                     PsiClass builderClass = getContainingBuilderClass(resolvedMethod);
                     if (builderClass != null && processMissingFields(expression,
                             getMandatoryFields(builderClass)).size() > 0) {
