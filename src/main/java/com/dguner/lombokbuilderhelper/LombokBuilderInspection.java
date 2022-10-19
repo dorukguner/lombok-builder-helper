@@ -21,7 +21,6 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -102,12 +101,12 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
         final String defaultBuilderValueAnnotation = "lombok.Builder.Default";
         return Arrays.stream(aClass.getAllFields())
                 .filter(field -> {
-                    final Stream<PsiAnnotation> annotations = Arrays.stream(field.getAnnotations());
+                    final PsiAnnotation[] annotations = field.getAnnotations();
                     final PsiModifierList modifiers = field.getModifierList();
                     final boolean isStaticField = modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
                     return !isStaticField
-                            && annotations.anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName()))
-                            && annotations.noneMatch(annotation ->
+                            && Arrays.stream(annotations).anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName()))
+                            && Arrays.stream(annotations).noneMatch(annotation ->
                                 Objects.equals(annotation.getQualifiedName(), defaultBuilderValueAnnotation));
                 })
                 .map(PsiField::getName)
