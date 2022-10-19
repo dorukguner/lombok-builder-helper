@@ -100,16 +100,19 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
     }
 
     private boolean isClassBuilder(PsiClass aClass) {
+        final Set<String> builderClassQualifiedNames = Set.of("lombok.Builder", "lombok.experimental.SuperBuilder");
         return Arrays.stream(aClass.getAnnotations())
-                .anyMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
-                        "lombok.Builder"));
+                .anyMatch(annotation -> builderClassQualifiedNames.contains(annotation.getQualifiedName()));
     }
 
     private List<String> getMandatoryFields(PsiClass aClass) {
+        final Set<String> nonNullAnnotations = Set.of("lombok.NonNull", "org.jetbrains.annotations.NotNull");
+        final String defaultBuilderValueAnnotation = "lombok.Builder.Default";
         return Arrays.stream(aClass.getAllFields())
                 .filter(field -> Arrays.stream(field.getAnnotations())
-                        .anyMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
-                                "lombok.NonNull")))
+                        .anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName())))
+                .filter(field -> Arrays.stream(field.getAnnotations())
+                        .noneMatch(annotation -> Objects.equals(annotation.getQualifiedName(), defaultBuilderValueAnnotation)))
                 .map(PsiField::getName)
                 .collect(Collectors.toList());
     }
