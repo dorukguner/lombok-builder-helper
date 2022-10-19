@@ -7,17 +7,7 @@ import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.JavaElementVisitor;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementFactory;
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.PsiLocalVariable;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiMethodCallExpression;
-import com.intellij.psi.PsiReference;
+import com.intellij.psi.*;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
 import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
@@ -31,6 +21,8 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.jetbrains.annotations.NotNull;
 
 public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool {
@@ -109,10 +101,15 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
         final Set<String> nonNullAnnotations = Set.of("lombok.NonNull", "org.jetbrains.annotations.NotNull");
         final String defaultBuilderValueAnnotation = "lombok.Builder.Default";
         return Arrays.stream(aClass.getAllFields())
-                .filter(field -> Arrays.stream(field.getAnnotations())
-                        .anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName())))
-                .filter(field -> Arrays.stream(field.getAnnotations())
-                        .noneMatch(annotation -> Objects.equals(annotation.getQualifiedName(), defaultBuilderValueAnnotation)))
+                .filter(field -> {
+                    final Stream<PsiAnnotation> annotations = Arrays.stream(field.getAnnotations());
+                    final PsiModifierList modifiers = field.getModifierList();
+                    final boolean isStaticField = modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
+                    return !isStaticField
+                            && annotations.anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName()))
+                            && annotations.noneMatch(annotation ->
+                                Objects.equals(annotation.getQualifiedName(), defaultBuilderValueAnnotation));
+                })
                 .map(PsiField::getName)
                 .collect(Collectors.toList());
     }
