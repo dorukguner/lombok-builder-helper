@@ -7,7 +7,20 @@ import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.*;
+import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.JavaPsiFacade;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiElementFactory;
+import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiLocalVariable;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiModifier;
+import com.intellij.psi.PsiModifierList;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
 import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
@@ -21,7 +34,6 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.jetbrains.annotations.NotNull;
 
 public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool {
@@ -37,44 +49,48 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
 
         while (!queue.isEmpty()) {
             PsiElement cur = queue.poll();
-            seenElements.add(cur);
-            if (cur instanceof PsiIdentifierImpl) {
-                mandatoryFields.remove(cur.getText());
-            }
-
-            if (cur instanceof PsiMethodCallExpressionImpl) {
-                // If we are calling build on an element that was a result of a toBuilder call we assume
-                // that the builder already has all mandatory fields set
-                PsiMethod resolvedMethod = ((PsiMethodCallExpressionImpl) cur).resolveMethod();
-                if (resolvedMethod != null && Objects.equals(resolvedMethod.getClass().getName(),
-                        "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder")
-                        && Objects.equals(resolvedMethod.getName(), "toBuilder")) {
-                    mandatoryFields.clear();
-                    break;
+            if (cur != null) {
+                seenElements.add(cur);
+                if (cur instanceof PsiIdentifierImpl) {
+                    mandatoryFields.remove(cur.getText());
                 }
-            }
 
-            if (cur instanceof PsiReferenceExpressionImpl) {
-                PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
-                if (resolvedElement instanceof PsiLocalVariable) {
-                    PsiElement initializer = ((PsiLocalVariable) resolvedElement).getInitializer();
-                    if (!seenElements.contains(initializer)) {
-                        queue.offer(initializer);
+                if (cur instanceof PsiMethodCallExpressionImpl) {
+                    // If we are calling build on an element that was a result of a toBuilder call we assume
+                    // that the builder already has all mandatory fields set
+                    PsiMethod resolvedMethod = ((PsiMethodCallExpressionImpl) cur).resolveMethod();
+                    if (resolvedMethod != null && Objects.equals(
+                            resolvedMethod.getClass().getName(),
+                            "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder")
+                            && Objects.equals(resolvedMethod.getName(), "toBuilder")) {
+                        mandatoryFields.clear();
+                        break;
                     }
-
-                    Arrays.stream(ReferencesSearch.search(resolvedElement,
-                                    GlobalSearchScope.fileScope(resolvedElement.getContainingFile()), false)
-                            .toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
-                        PsiElement referenceParent = reference.getElement().getParent();
-                        if (!seenElements.contains(referenceParent)) {
-                            queue.offer(referenceParent);
-                        }
-                    });
                 }
-            }
 
-            for (PsiElement child : cur.getChildren()) {
-                queue.offer(child);
+                if (cur instanceof PsiReferenceExpressionImpl) {
+                    PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
+                    if (resolvedElement instanceof PsiLocalVariable) {
+                        PsiElement initializer =
+                                ((PsiLocalVariable) resolvedElement).getInitializer();
+                        if (!seenElements.contains(initializer)) {
+                            queue.offer(initializer);
+                        }
+
+                        Arrays.stream(ReferencesSearch.search(resolvedElement,
+                                GlobalSearchScope.fileScope(resolvedElement.getContainingFile()),
+                                false).toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
+                            PsiElement referenceParent = reference.getElement().getParent();
+                            if (!seenElements.contains(referenceParent)) {
+                                queue.offer(referenceParent);
+                            }
+                        });
+                    }
+                }
+
+                for (PsiElement child : cur.getChildren()) {
+                    queue.offer(child);
+                }
             }
         }
 
@@ -91,26 +107,28 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
     }
 
     private boolean isClassBuilder(PsiClass aClass) {
-        final Set<String> builderClassQualifiedNames = Set.of("lombok.Builder", "lombok.experimental.SuperBuilder");
+        final Set<String> builderClassQualifiedNames =
+                Set.of("lombok.Builder", "lombok.experimental.SuperBuilder");
         return Arrays.stream(aClass.getAnnotations())
-                .anyMatch(annotation -> builderClassQualifiedNames.contains(annotation.getQualifiedName()));
+                .anyMatch(annotation -> builderClassQualifiedNames.contains(
+                        annotation.getQualifiedName()));
     }
 
     private List<String> getMandatoryFields(PsiClass aClass) {
-        final Set<String> nonNullAnnotations = Set.of("lombok.NonNull", "org.jetbrains.annotations.NotNull");
+        final Set<String> nonNullAnnotations =
+                Set.of("lombok.NonNull", "org.jetbrains.annotations.NotNull");
         final String defaultBuilderValueAnnotation = "lombok.Builder.Default";
-        return Arrays.stream(aClass.getAllFields())
-                .filter(field -> {
-                    final PsiAnnotation[] annotations = field.getAnnotations();
-                    final PsiModifierList modifiers = field.getModifierList();
-                    final boolean isStaticField = modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
-                    return !isStaticField
-                            && Arrays.stream(annotations).anyMatch(annotation -> nonNullAnnotations.contains(annotation.getQualifiedName()))
-                            && Arrays.stream(annotations).noneMatch(annotation ->
-                                Objects.equals(annotation.getQualifiedName(), defaultBuilderValueAnnotation));
-                })
-                .map(PsiField::getName)
-                .collect(Collectors.toList());
+        return Arrays.stream(aClass.getAllFields()).filter(field -> {
+            final PsiAnnotation[] annotations = field.getAnnotations();
+            final PsiModifierList modifiers = field.getModifierList();
+            final boolean isStaticField =
+                    modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
+            return !isStaticField && Arrays.stream(annotations)
+                    .anyMatch(annotation -> nonNullAnnotations.contains(
+                            annotation.getQualifiedName())) && Arrays.stream(annotations)
+                    .noneMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
+                            defaultBuilderValueAnnotation));
+        }).map(PsiField::getName).collect(Collectors.toList());
     }
 
     @NotNull
