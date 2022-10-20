@@ -37,44 +37,44 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
 
         while (!queue.isEmpty()) {
             PsiElement cur = queue.poll();
-            seenElements.add(cur);
-            if (cur instanceof PsiIdentifierImpl) {
-                mandatoryFields.remove(cur.getText());
-            }
-
-            if (cur instanceof PsiMethodCallExpressionImpl) {
-                // If we are calling build on an element that was a result of a toBuilder call we assume
-                // that the builder already has all mandatory fields set
-                PsiMethod resolvedMethod = ((PsiMethodCallExpressionImpl) cur).resolveMethod();
-                if (resolvedMethod != null && Objects.equals(resolvedMethod.getClass().getName(),
-                        "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder")
-                        && Objects.equals(resolvedMethod.getName(), "toBuilder")) {
-                    mandatoryFields.clear();
-                    break;
+            if (cur != null) {
+                seenElements.add(cur);
+                if (cur instanceof PsiIdentifierImpl) {
+                    mandatoryFields.remove(cur.getText());
                 }
-            }
 
-            if (cur instanceof PsiReferenceExpressionImpl) {
-                PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
-                if (resolvedElement instanceof PsiLocalVariable) {
-                    PsiElement initializer = ((PsiLocalVariable) resolvedElement).getInitializer();
-                    if (!seenElements.contains(initializer)) {
-                        queue.offer(initializer);
+                if (cur instanceof PsiMethodCallExpressionImpl) {
+                    // If we are calling build on an element that was a result of a toBuilder call we assume
+                    // that the builder already has all mandatory fields set
+                    PsiMethod resolvedMethod = ((PsiMethodCallExpressionImpl) cur).resolveMethod();
+                    if (resolvedMethod != null && Objects.equals(resolvedMethod.getClass().getName(),
+                            "de.plushnikov.intellij.plugin.psi.LombokLightMethodBuilder") && Objects.equals(resolvedMethod.getName(), "toBuilder")) {
+                        mandatoryFields.clear();
+                        break;
                     }
-
-                    Arrays.stream(ReferencesSearch.search(resolvedElement,
-                                    GlobalSearchScope.fileScope(resolvedElement.getContainingFile()), false)
-                            .toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
-                        PsiElement referenceParent = reference.getElement().getParent();
-                        if (!seenElements.contains(referenceParent)) {
-                            queue.offer(referenceParent);
-                        }
-                    });
                 }
-            }
 
-            for (PsiElement child : cur.getChildren()) {
-                queue.offer(child);
+                if (cur instanceof PsiReferenceExpressionImpl) {
+                    PsiElement resolvedElement = ((PsiReferenceExpressionImpl) cur).resolve();
+                    if (resolvedElement instanceof PsiLocalVariable) {
+                        PsiElement initializer = ((PsiLocalVariable) resolvedElement).getInitializer();
+                        if (!seenElements.contains(initializer)) {
+                            queue.offer(initializer);
+                        }
+
+                        Arrays.stream(ReferencesSearch.search(resolvedElement, GlobalSearchScope.fileScope(resolvedElement.getContainingFile()),
+                                false).toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
+                            PsiElement referenceParent = reference.getElement().getParent();
+                            if (!seenElements.contains(referenceParent)) {
+                                queue.offer(referenceParent);
+                            }
+                        });
+                    }
+                }
+
+                for (PsiElement child : cur.getChildren()) {
+                    queue.offer(child);
+                }
             }
         }
 
