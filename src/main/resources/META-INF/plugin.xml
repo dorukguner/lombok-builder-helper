@@ -5,18 +5,21 @@
 
   <description><![CDATA[
 <p>
-    Displays an error when <b>@NonNull</b> annotated fields are not set when calling a Lombok <b>@Builder</b>
+    Displays an error when <b>@NonNull</b> or <b>@NotNull</b> annotated fields are not set when calling a Lombok <b>@Builder</b> or <b>@SuperBuilder</b>
 </p>
 <p>
-    Quick-fix adds all fields that are annotated with <b>@NonNull</b> to the builder call
+    Quick-fix adds all fields that are annotated not nullable to the builder call
 </p>
     ]]></description>
 
   <change-notes><![CDATA[
   <h2>Improvements</h2>
   <ul>
-  <li>Improved code inspection and object comparisons</li>
-  <li>Now accounts for prior calls to toBuilder</li>
+  <li>Now checks for fields annotated with org.jetbrains.annotations.NotNull</li>
+  <li>Identifies the use of @SuperBuilder as a Builder class</li>
+  <li>Ignores fields annotated by @Builder.Default</li>
+  <li>Ignores static fields</li>
+  <li>Minor bug fix</li>
   </ul>
   ]]></change-notes>
 
@@ -25,7 +28,7 @@
 
   <extensions defaultExtensionNs="com.intellij">
     <localInspection language="JAVA"
-      displayName="Lombok builder is missing @NonNull fields"
+      displayName="Lombok builder is missing non nullable fields"
       groupPath="Java"
       groupBundle="messages.InspectionsBundle"
       groupKey="group.names.probable.bugs"

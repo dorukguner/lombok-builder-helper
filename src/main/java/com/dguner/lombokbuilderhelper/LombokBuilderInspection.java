@@ -136,7 +136,8 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
     public PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder,
             boolean isOnTheFly) {
         return new JavaElementVisitor() {
-            private final String DESCRIPTION_TEMPLATE = "Builder is missing @NonNull fields";
+            private static final String DESCRIPTION_TEMPLATE =
+                    "Lombok builder is missing non nullable fields";
 
             @Override
             public void visitMethodCallExpression(PsiMethodCallExpression expression) {
