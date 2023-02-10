@@ -89,9 +89,12 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
                         Arrays.stream(ReferencesSearch.search(resolvedElement,
                                 GlobalSearchScope.fileScope(resolvedElement.getContainingFile()),
                                 false).toArray(PsiReference.EMPTY_ARRAY)).forEach(reference -> {
-                            PsiElement referenceParent = reference.getElement().getParent();
-                            if (!seenElements.contains(referenceParent)) {
-                                queue.offer(referenceParent);
+                            if (reference.getElement().getTextRange().getStartOffset()
+                                    < cur.getTextRange().getStartOffset()) {
+                                PsiElement referenceParent = reference.getElement().getParent();
+                                if (!seenElements.contains(referenceParent)) {
+                                    queue.offer(referenceParent);
+                                }
                             }
                         });
                     }
