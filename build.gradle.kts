@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.dguner.lombokbuilderhelper"
-version = "1.3.0"
+version = "1.4.0"
 
 repositories {
     mavenCentral()
@@ -12,7 +12,6 @@ repositories {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.projectlombok:lombok:1.18.24")
 }
 
 intellij {

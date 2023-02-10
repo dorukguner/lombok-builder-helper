@@ -5,7 +5,7 @@
 
   <description><![CDATA[
 <p>
-    Displays an error when <b>@NonNull</b> or <b>@NotNull</b> annotated fields are not set when calling a Lombok <b>@Builder</b> or <b>@SuperBuilder</b>
+    Displays an error when non-nullable annotated fields are not set when calling a Lombok <b>@Builder</b>
 </p>
 <p>
     Quick-fix adds all fields that are annotated not nullable to the builder call
@@ -15,11 +15,9 @@
   <change-notes><![CDATA[
   <h2>Improvements</h2>
   <ul>
-  <li>Now checks for fields annotated with org.jetbrains.annotations.NotNull</li>
-  <li>Identifies the use of @SuperBuilder as a Builder class</li>
-  <li>Ignores fields annotated by @Builder.Default</li>
-  <li>Ignores static fields</li>
-  <li>Minor bug fix</li>
+  <li>Now checks for fields annotated with javax.validation.constraints.NotNull</li>
+  <li>Now only considers fields set previous to build call</li>
+  <li>Fixes bug when fields are set in different method</li>
   </ul>
   ]]></change-notes>
 
