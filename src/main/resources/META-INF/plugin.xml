@@ -15,9 +15,7 @@
   <change-notes><![CDATA[
   <h2>Improvements</h2>
   <ul>
-  <li>Now checks for fields annotated with javax.validation.constraints.NotNull</li>
-  <li>Now only considers fields set previous to build call</li>
-  <li>Fixes bug when fields are set in different method</li>
+  <li>Algorithm improvements</li>
   </ul>
   ]]></change-notes>
 
