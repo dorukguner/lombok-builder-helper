@@ -101,7 +101,11 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
                 }
 
                 for (PsiElement child : cur.getChildren()) {
-                    queue.offer(child);
+                    if (!seenElements.contains(child) && (child instanceof PsiIdentifierImpl
+                            || child instanceof PsiMethodCallExpressionImpl
+                            || child instanceof PsiReferenceExpressionImpl)) {
+                        queue.offer(child);
+                    }
                 }
             }
         }
@@ -182,16 +186,19 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
                 List<String> missingFields = processMissingFields(expression,
                         getMandatoryFields(getContainingBuilderClass(resolvedMethod)));
 
-                String errorText = expression.getText();
+                if (!missingFields.isEmpty()) {
+                    String errorText = expression.getText();
 
-                PsiElementFactory factory = JavaPsiFacade.getInstance(project).getElementFactory();
-                PsiMethodCallExpression fixedMethodExpression =
-                        (PsiMethodCallExpression) factory.createExpressionFromText(
-                                errorText.replace(".build()",
-                                        "." + String.join("().", missingFields) + "().build()"),
-                                null);
+                    PsiElementFactory factory =
+                            JavaPsiFacade.getInstance(project).getElementFactory();
+                    PsiMethodCallExpression fixedMethodExpression =
+                            (PsiMethodCallExpression) factory.createExpressionFromText(
+                                    errorText.replace(".build()",
+                                            "." + String.join("().", missingFields) + "().build()"),
+                                    null);
 
-                expression.replace(fixedMethodExpression);
+                    expression.replace(fixedMethodExpression);
+                }
             } else {
                 LOG.error("Resolved method null when applying fix");
             }
