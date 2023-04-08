@@ -5,17 +5,17 @@
 
   <description><![CDATA[
 <p>
-    Displays an error when non-nullable annotated fields are not set when calling a Lombok <b>@Builder</b>
+    Displays an error when non-null fields are not set when calling a Lombok <b>@Builder</b>
 </p>
 <p>
-    Quick-fix adds all fields that are annotated not nullable to the builder call
+    Quick-fix adds all non-null fields to the builder call
 </p>
     ]]></description>
 
   <change-notes><![CDATA[
   <h2>Improvements</h2>
   <ul>
-  <li>Algorithm improvements</li>
+  <li>Now treats primitive typed fields as non nullable</li>
   </ul>
   ]]></change-notes>
 
@@ -24,7 +24,7 @@
 
   <extensions defaultExtensionNs="com.intellij">
     <localInspection language="JAVA"
-      displayName="Lombok builder is missing non nullable fields"
+      displayName="Lombok builder is missing non-null fields"
       groupPath="Java"
       groupBundle="messages.InspectionsBundle"
       groupKey="group.names.probable.bugs"
