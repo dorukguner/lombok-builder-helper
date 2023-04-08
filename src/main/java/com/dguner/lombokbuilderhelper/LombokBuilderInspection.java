@@ -20,6 +20,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiModifierList;
+import com.intellij.psi.PsiPrimitiveType;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.PsiReturnStatement;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
@@ -138,11 +139,12 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
         return Arrays.stream(aClass.getAllFields()).filter(field -> {
             final PsiAnnotation[] annotations = field.getAnnotations();
             final PsiModifierList modifiers = field.getModifierList();
+            final boolean isPrimitiveType = field.getType() instanceof PsiPrimitiveType;
             final boolean isStaticField =
                     modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
-            return !isStaticField && Arrays.stream(annotations)
+            return !isStaticField && (isPrimitiveType || Arrays.stream(annotations)
                     .anyMatch(annotation -> nonNullAnnotations.contains(
-                            annotation.getQualifiedName())) && Arrays.stream(annotations)
+                            annotation.getQualifiedName()))) && Arrays.stream(annotations)
                     .noneMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
                             defaultBuilderValueAnnotation));
         }).map(PsiField::getName).collect(Collectors.toList());
