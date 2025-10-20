@@ -143,9 +143,12 @@ public class LombokBuilderInspection extends AbstractBaseJavaLocalInspectionTool
             final PsiAnnotation[] annotations = field.getAnnotations();
             final PsiModifierList modifiers = field.getModifierList();
             final boolean isPrimitiveType = field.getType() instanceof PsiPrimitiveType;
+            final boolean isRecord = aClass.isRecord();
+            // unlike class, record doesn't allow a default value (using @Default) nor can @NotNull be used.
+            final boolean isPrimitiveMandatory = isPrimitiveType && !isRecord;
             final boolean isStaticField =
                     modifiers != null && modifiers.hasModifierProperty(PsiModifier.STATIC);
-            return !isStaticField && (isPrimitiveType || Arrays.stream(annotations)
+            return !isStaticField && (isPrimitiveMandatory || Arrays.stream(annotations)
                     .anyMatch(annotation -> nonNullAnnotations.contains(
                             annotation.getQualifiedName()))) && Arrays.stream(annotations)
                     .noneMatch(annotation -> Objects.equals(annotation.getQualifiedName(),
