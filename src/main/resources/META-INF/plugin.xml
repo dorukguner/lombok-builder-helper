@@ -15,7 +15,9 @@
   <change-notes><![CDATA[
   <h2>Improvements</h2>
   <ul>
-  <li>Now treats primitive typed fields as non nullable</li>
+  <li>Added support for JPA/Hibernate @Column(nullable=false) detection (configurable via registry key) controlled via 'lombok.builder.helper.treat.jpa.nullable.false.as.mandatory' registry key. Automatically excludes Hibernate/JPA auto-generated fields (@CreationTimestamp, @UpdateTimestamp, @UuidGenerator, @GeneratedValue, @Id, etc.) from mandatory field checking.</li>
+  <li>Added registry key 'lombok.builder.helper.treat.primitives.as.mandatory' to make primitive field checking configurable.</li>
+  <li>Now treats primitive typed fields as non nullable (can be disabled via registry key).</li>
   </ul>
   ]]></change-notes>
 
@@ -31,5 +33,15 @@
       enabledByDefault="true"
       level="ERROR"
       implementationClass="com.dguner.lombokbuilderhelper.LombokBuilderInspection"/>
+
+    <registryKey key="lombok.builder.helper.treat.primitives.as.mandatory"
+                 description="When enabled, primitive typed fields (int, boolean, etc.) are treated as mandatory in Lombok builder calls and will show errors if not set."
+                 defaultValue="false"
+                 restartRequired="false"/>
+
+    <registryKey key="lombok.builder.helper.treat.jpa.nullable.false.as.mandatory"
+                 description="When enabled, fields annotated with @Column(nullable=false) from JPA/Hibernate are treated as mandatory in Lombok builder calls."
+                 defaultValue="true"
+                 restartRequired="false"/>
   </extensions>
 </idea-plugin>

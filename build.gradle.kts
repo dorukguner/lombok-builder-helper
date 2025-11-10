@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.dguner.lombokbuilderhelper"
-version = "1.5.0"
+version = "1.5.2"
 
 repositories {
     mavenCentral()
